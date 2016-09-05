@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Логинимся</title>
+</head>
+<body>
+    <form action="" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{request.GET.next }}" />
+        {{ form }}
+        <input type="submit" value="Войти" />
+    </form>
+    <a href="/">На главную</a>
+</body>
+</html>
