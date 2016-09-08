@@ -1,0 +1,52 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Наш чатик</title>
+    <link rel="stylesheet" type="text/css" href="{% static "mychat/main.css" %}">
+</head>
+<body>
+<!--
+    {% if request.user.is_authenticated %}
+    	<ul>
+        <li><a href="/">На главную</a></li>
+       	<li>Список зарегистрированных пользователей</li>
+			<ol>
+			{% for username in userList %}
+		    <li>{{ username }}</li>
+			{% endfor %}
+			</ol>
+    	</ul>
+	{% else %}
+        <h3>Чтобы воспользоваться чатом, необходимо пройти аутентификацию</h3>
+        <a href="/">На главную</a>
+    {% endif %}
+-->
+    <div id="working-area" class="black-bordered">
+        <div id="messages" class="black-bordered">
+            <p>Здесь будут сообщения</p>
+            <p>Здесь будут сообщения</p>
+            <p>Здесь будут сообщения</p>
+            <p>Здесь будут сообщения</p>
+            <p>Здесь будут сообщения</p>
+        </div>
+        <div id="edit-area" class="black-bordered">
+            <input id="btn-send-msg" type="button" value="Отправить" name="btn-send-msg"/>
+            <textarea id="edit-window" name="edit-window"></textarea>
+        </div>
+    </div>
+
+    <div id="info-area" class="black-bordered">
+
+        <div id="user-info" class="black-bordered">
+            Здесь будет информация о пользователе, вот так то.
+        </div>
+
+        <div id="users-list" class="black-bordered">
+            Здесь будет список пользователей онлайн
+        </div>
+    </div>
+
+</body>
+</html>

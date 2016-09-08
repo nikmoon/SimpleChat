@@ -1,0 +1,76 @@
+html {
+    height: 100%;
+    box-sizing: border-box;
+}
+
+body {
+    position: relative;
+    width: 800px;
+    height: 100%;
+    min-height: 400px;
+    margin: auto;
+    border: 5px solid blue;
+    box-sizing: border-box;
+}
+
+
+.black-bordered {
+    border: 1px solid black;
+}
+
+div#working-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 500px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+
+div#info-area {
+    position: absolute;
+    top: 0;
+    left: 500px;
+    box-sizing: border-box;
+}
+
+
+div#messages {
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 100px;
+    width: 100%;
+    overflow: auto;
+}
+
+div#edit-area {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 100px;
+    width: 100%;
+    padding: 5px;
+}
+
+input#btn-send-msg {
+    position: absolute;
+    width: 20%;
+    bottom: 5px;
+    right: 0;
+}
+
+
+textarea#edit-window {
+    display: block;
+    box-sizing: border-box;
+    width: 80%;
+    height: 100%;
+    margin: 0;
+    resize: none;
+    border-color: red;
+    padding: 3px;
+}

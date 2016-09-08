@@ -13,9 +13,19 @@
     <h2>Приветствуем Вас, неизвестный пользователь!</h2>
     <ul>
         <li><a href="/auth/login/?next=/">Представиться</a></li>
+        <li><a href="/auth/register/?next=/">Создать аккаунт</a></li>
     {% endif %}
         <li><a href="/chat/">Чат</a></li>
         <li><a href="/tornado/">Торнадо</a></li>
+	    {% if request.user.is_authenticated %}
+        	<li>Список зарегистрированных пользователей</li>
+			<ol>
+				{% for username in userList %}
+					<li>{{ username }}</li>
+				{% endfor %}
+			</ol>
+		{% endif %}
     </ul>
+
 </body>
 </html>
