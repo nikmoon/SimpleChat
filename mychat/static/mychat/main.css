@@ -18,6 +18,10 @@ body {
     border: 1px solid black;
 }
 
+div {
+    padding-left: 5px;
+}
+
 div#working-area {
     position: absolute;
     top: 0;
@@ -33,6 +37,7 @@ div#info-area {
     top: 0;
     left: 500px;
     box-sizing: border-box;
+    padding: 0;
 }
 
 
@@ -44,6 +49,7 @@ div#messages {
     bottom: 100px;
     width: 100%;
     overflow: auto;
+    padding-left: 5px;
 }
 
 div#edit-area {
@@ -59,10 +65,15 @@ div#edit-area {
 input#btn-send-msg {
     position: absolute;
     width: 20%;
-    bottom: 5px;
+    bottom: 0;
     right: 0;
 }
 
+form {
+    position: relative;
+    box-sizing: border-box;
+    height: 100%;
+}
 
 textarea#edit-window {
     display: block;

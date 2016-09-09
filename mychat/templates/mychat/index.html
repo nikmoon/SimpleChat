@@ -32,8 +32,11 @@
             <p>Здесь будут сообщения</p>
         </div>
         <div id="edit-area" class="black-bordered">
-            <input id="btn-send-msg" type="button" value="Отправить" name="btn-send-msg"/>
-            <textarea id="edit-window" name="edit-window"></textarea>
+            <form method="post">
+                {% csrf_token %}
+                <input id="btn-send-msg" type="submit" value="Отправить" name="btn-send-msg"/>
+                <textarea id="edit-window" name="edit-window"></textarea>
+            </form>
         </div>
     </div>
 
@@ -48,5 +51,6 @@
         </div>
     </div>
 
+    <script src="{% static "mychat/main.js" %}"></script>
 </body>
 </html>
