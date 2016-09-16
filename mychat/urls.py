@@ -18,4 +18,7 @@ from . import views
 
 urlpatterns = [
     url(r'^$', views.index),
+    url(r'^save-message$', views.save_message),
+    url(r'^check-user$', views.check_user),
+    url(r'^last-messages$', views.last_messages),
 ]

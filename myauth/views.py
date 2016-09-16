@@ -5,6 +5,9 @@ from django import forms
 import django.contrib.auth as auth
 from django.core.urlresolvers import reverse
 
+from tornado.httpclient import HTTPClient
+
+
 # Create your views here.
 
 
@@ -39,6 +42,11 @@ class RegistrationForm(forms.Form):
             self.add_error('userPassw1', forms.ValidationError('Пароли не совпадают'))
 
 
+
+def say_to_tornado(request):
+    HTTPClient().fetch('http://127.0.0.1:8889/tornado/auth/login', method='POST', body=request.session.session_key)
+
+
 def mylogin(request):
     if request.user.is_authenticated():
         return HttpResponseRedirect(request.GET.get("next", "/"))
@@ -48,6 +56,7 @@ def mylogin(request):
             user = auth.authenticate(username=form.cleaned_data['f_username'], password=form.cleaned_data['f_password'])
             if user is not None:
                 auth.login(request, user)
+                say_to_tornado(request)
                 return HttpResponseRedirect(request.POST.get("next", "/"))
     else:
         form = NameForm()

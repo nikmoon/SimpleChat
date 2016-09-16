@@ -1,4 +1,4 @@
-//"use strict"
+"use strict"
 
 function my_test() {
 	var i = 1;
@@ -14,6 +14,9 @@ function my_args() {
 
 var xhr = new XMLHttpRequest();
 
-xhr.open("get", "https://www.yandex.ru", false);
-xhr.send();
-alert(xhr.getAllResponseHeaders());
+xhr.open("post", "/tornado/getmsg", false);
+xhr.send("5");
+if (xhr.responseText) {
+	alert(xhr.responseText);
+}
+//alert(xhr.getAllResponseHeaders());
