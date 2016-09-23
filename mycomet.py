@@ -4,6 +4,7 @@ from tornado.concurrent import Future
 from tornado import gen
 from tornado.httpclient import HTTPClient, AsyncHTTPClient, HTTPRequest
 from tornado.queues import Queue
+from comet_secret import AUTH_SECRET
 
 
 '''
@@ -15,96 +16,126 @@ from tornado.queues import Queue
 '''
 authUsers = {}
 
-
 waiters = []
-last_id = 0
+
+msgQueue = Queue(maxsize=10)
+msgBuffer = []
+msgLastID = 0
+
+
+import sys
+from tornado.escape import json_decode
+response = HTTPClient().fetch('http://192.168.56.1/chat/users-online')
+data = json_decode(response.body)
+for sid in data:
+    authUsers[sid] = data[sid]
+print(authUsers)
 
 
 
-'''
+def get_sid(requestHandler):
+    sid = requestHandler.get_cookie('sessionid')
+    return sid if sid in authUsers else None
+
+
+
 @gen.coroutine
-def user_authenticated(headers):
-    response = yield AsyncHTTPClient().fetch(
-        'http://127.0.0.1:8888/chat/check',
-        headers={'Cookie': headers['Cookie']}
-    )
-    return response.body == b'OK'
-'''
-def is_authenticated(requestHandler):
-    django_sid = requestHandler.get_cookie('sessionid')
-    return django_sid in authUsers
-
-
-def get_django_user(django_response):
-    body = django_response.result().body
-    if body != b"UNKNOWN":
-        '''
-        Проверка аутентификации прошла успешно
-        '''
-        username, django_sid = body.decode('utf-8').split('\n')
-        authUsers[django_sid] = [username, []]
+def send_message():
+    global waiters, msgLastID
+    while 1:
+        msg = yield msgQueue.get()
+        print('Рассылаем сообщение: ' + msg[0])
+        for waiter in waiters:
+            print('Отослали.')
+            waiter.set_result(msg)
+        waiters = []
+        msgLastID = msg[1]
+        msgBuffer.append(msg)
 
 
 class UserLogin(tornado.web.RequestHandler):
     def post(self):
-        django_sid = self.request.body
-        future = AsyncHTTPClient().fetch('http://127.0.0.1:8888/chat/check-user', headers={'Cookie': b'sessionid=' + django_sid})
-        tornado.ioloop.IOLoop.current().add_future(future, get_django_user)
-        self.write(django_sid)
+        result = 'FAILED'
+        try:
+            secret, sid, userName = self.request.body.decode('utf-8').split('\n', 2)
+            if secret == AUTH_SECRET:
+                authUsers[sid] = userName
+                result = 'OK'
+                print(authUsers)
+        except Exception:
+            pass
+        print('Login: ' + result)
+        self.write(result)
 
 
 
 class UserLogout(tornado.web.RequestHandler):
     def post(self):
-        body = self.request.body
-        self.write(body)
-        
+        result = 'FAILED'
+        try:
+            secret, sid, userName = self.request.body.decode('utf-8').split('\n', 2)
+            if secret == AUTH_SECRET:
+                del authUsers[sid]
+                result = 'OK'
+                print(authUsers)
+        except Exception:
+            pass
+        print('Logout: ' + result)
+        self.write(result)
+
+
+class MessageWait(tornado.web.RequestHandler):
+    @gen.coroutine
+    def get(self):
+        sid = get_sid(self)
+        if sid:
+            print('Пришел запрос на ожидание сообщений, sid = ' + sid);
+            future = Future()
+            waiters.append(future)
+            self.future = future
+            msg = yield future
+            self.write('{}\n{}'.format(*msg))
+        else:
+            self.write('FAILED')
+
+    def on_connection_close(self):
+        print('Соединение разорвано')
+        waiters.remove(self.future)
+        self.future.set_result([])
 
 
 class MessageSender(tornado.web.RequestHandler):
-
     @gen.coroutine
     def post(self):
-        if not is_authenticated(self):
-            self.write('Пошел вон отсюда!')
-            return
+        result = 'FAILED'
         try:
-            user_last_id = int(self.request.body)
+            secret, sid, msgText, msgID = self.request.body.decode('utf-8').split('\n', 3)
+            if secret == AUTH_SECRET:
+                yield msgQueue.put(['Сообщение: ' + msgText, msgID])
+            result = 'OK'
         except Exception:
-            self.write('Чо за херню ты мне тут передаешь? Я ожидаю ID последнего сообщения, которое ты получил.')
-            return
-        if user_last_id >= last_id:
-            self.messages = Future()
-            waiters.append(self.messages)
-            result = yield self.messages
-            self.write(result)
-        else:
             pass
-        self.write('Здесь должны быть новые сообщения')
-        
+        self.write(result)
 
-
-class MessageReceiver(tornado.web.RequestHandler):
+'''
     @gen.coroutine
-    def post(self):
-        global waiters, last_id
-        if not is_authenticated(self):
-            self.write('Пошел вон отсюда')
-            return
-        for waiter in waiters:
-            waiter.set_result(self.request.body)
-        waiters = []
-        self.write('OK')
+    def save_message(self, msgText, sid):
+        userName = authUsers[sid][0]
+        result = yield AsyncHTTPClient('http://127.0.0.1:8888/chat/save-message').fetch(body=msgText, headers={'Cookie': 'sessionid={}'.format(sid)})
+        print(result)
+        return result
+'''
 
 
 if __name__ == '__main__':
     app = tornado.web.Application([
-        (r"/tornado/auth/login", UserLogin),
-        (r"/tornado/auth/logout", UserLogout),
-        (r"/tornado/sendmsg", MessageReceiver),
-        (r"/tornado/getmsg", MessageSender),
+        (r"/tornado/login", UserLogin),
+        (r"/tornado/logout", UserLogout),
+        (r"/tornado/sendmsg", MessageSender),
+        (r"/tornado/waitmsg", MessageWait),
     ])
     app.listen(8889)
+    tornado.ioloop.IOLoop.current().add_callback(send_message)
     tornado.ioloop.IOLoop.current().start()
 #    tornado.ioloop.IOLoop.current().run_sync(print_message)
 

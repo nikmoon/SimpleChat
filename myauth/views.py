@@ -6,6 +6,7 @@ import django.contrib.auth as auth
 from django.core.urlresolvers import reverse
 
 from tornado.httpclient import HTTPClient
+from comet_secret import AUTH_SECRET
 
 
 # Create your views here.
@@ -43,8 +44,9 @@ class RegistrationForm(forms.Form):
 
 
 
-def say_to_tornado(request):
-    HTTPClient().fetch('http://127.0.0.1:8889/tornado/auth/login', method='POST', body=request.session.session_key)
+def say_to_tornado(request, action):
+    actionUrl = 'http://127.0.0.1:8889/tornado' + action
+    result = HTTPClient().fetch(actionUrl, method='POST', body='{}\n{}\n{}'.format(AUTH_SECRET, request.session.session_key, request.user.username))
 
 
 def mylogin(request):
@@ -56,7 +58,7 @@ def mylogin(request):
             user = auth.authenticate(username=form.cleaned_data['f_username'], password=form.cleaned_data['f_password'])
             if user is not None:
                 auth.login(request, user)
-                say_to_tornado(request)
+                say_to_tornado(request, '/login')
                 return HttpResponseRedirect(request.POST.get("next", "/"))
     else:
         form = NameForm()
@@ -64,6 +66,7 @@ def mylogin(request):
 
 
 def mylogout(request):
+    say_to_tornado(request, '/logout')
     auth.logout(request)
     return HttpResponseRedirect("/")
 
@@ -77,3 +80,12 @@ def reg_view(request):
         form = RegistrationForm()
     return render(request, 'myauth/register.html', {'form': form})
 
+
+from django.core.exceptions import PermissionDenied
+def get_user_info(request):
+    if request.user.is_authenticated():
+        userName = request.user.username
+        sid = request.session.session_key
+        return HttpResponse('{}\n{}'.format(userName, sid))
+    else:
+        raise PermissionDenied()

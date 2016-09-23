@@ -1,4 +1,6 @@
+{% extends "mychat/base.html" %}
 {% load staticfiles %}
+{% block head %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,45 +9,50 @@
     <link rel="stylesheet" type="text/css" href="{% static "mychat/main.css" %}">
 </head>
 <body>
-<!--
     {% if request.user.is_authenticated %}
-    	<ul>
-        <li><a href="/">На главную</a></li>
-       	<li>Список зарегистрированных пользователей</li>
-			<ol>
-			{% for username in userList %}
-		    <li>{{ username }}</li>
-			{% endfor %}
-			</ol>
-    	</ul>
+		<div id="working-area" class="black-bordered">
+			<div id="messages" class="black-bordered">
+{% comment %}
+				<ul>
+				{% for msg in messages %}
+					<li>{{ msg.msgText }}</li>
+				{% endfor %}
+				</ul>
+{% endcomment %}
+			</div>
+			<div id="edit-area" class="black-bordered">
+				<form method="post" action="/tornado/sendmsg">
+					{% csrf_token %}
+					<input id="btn-send-msg" type="submit" value="Отправить" name="btn-send-msg"/>
+					<textarea id="edit-window" name="edit-window"></textarea>
+				</form>
+			</div>
+		</div>
+
+		<div id="info-area" class="black-bordered">
+
+			<div id="user-info" class="black-bordered">
+				Здесь будет информация о пользователе, вот так то.
+			</div>
+
+			<div id="users-list" class="black-bordered">
+				Список пользователей:
+				<ol>
+				{% for username in userList %}
+					<li>{{ username }}</li>
+				{% endfor %}
+				</ol>
+			</div>
+		</div>
+
+		{% block scripts %}
+		<script src="{% static "mychat/jquery-3.1.0.min.js" %}"></script>
+		<script src="{% static "mychat/main.js" %}"></script>
+		{% endblock %}
 	{% else %}
         <h3>Чтобы воспользоваться чатом, необходимо пройти аутентификацию</h3>
         <a href="/">На главную</a>
     {% endif %}
--->
-    <div id="working-area" class="black-bordered">
-        <div id="messages" class="black-bordered">
-        </div>
-        <div id="edit-area" class="black-bordered">
-            <form method="post" action="/tornado/sendmsg">
-                {% csrf_token %}
-                <input id="btn-send-msg" type="submit" value="Отправить" name="btn-send-msg"/>
-                <textarea id="edit-window" name="edit-window"></textarea>
-            </form>
-        </div>
-    </div>
-
-    <div id="info-area" class="black-bordered">
-
-        <div id="user-info" class="black-bordered">
-            Здесь будет информация о пользователе, вот так то.
-        </div>
-
-        <div id="users-list" class="black-bordered">
-            Здесь будет список пользователей онлайн
-        </div>
-    </div>
-
-    <script src="{% static "mychat/main.js" %}"></script>
 </body>
 </html>
+{% endblock head %}
