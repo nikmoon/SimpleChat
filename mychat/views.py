@@ -11,12 +11,12 @@ from mychat.models import ChatMessage
 
 from tornado.httpclient import HTTPClient
 from comet_secret import AUTH_SECRET
+import json
 
 # Create your views here.
 
 
 def valid_request(user):
-    print(user)
     return user.is_authenticated()
 
 def index(request):
@@ -30,19 +30,17 @@ def index(request):
 
 @csrf_exempt
 def new_message(request):
-    if valid_request(request.user) and request.method == 'GET':
-        msgText = request.body.decode('utf-8')
+    if valid_request(request.user) and request.method == 'POST':
+        msgText = request.POST['edit-window']
         message = ChatMessage.objects.create(msgText=msgText, msgAuthor=request.user)
-        print(msgText)
-        body = '{}\n{}\n{}\n{}'.format(AUTH_SECRET, request.session.session_key, msgText, message.id)
-        print(body)
+        response = json.dumps({'secret': AUTH_SECRET, 'id': message.id, 'text': msgText, 'username': request.user.username})
         result = HTTPClient().fetch('http://127.0.0.1:8889/tornado/sendmsg',
             method='POST',
-            body=body
+            body=response
         )
-        return HttpResponse(msgText)
+        return HttpResponseRedirect('/chat/')
     else:
-        return HttpResponse('FAILED')
+        return HttpResponseRedirect('/chat/')
 
 
 
@@ -60,15 +58,12 @@ def last_messages(request):
         Данный URL должен вызываться при первой загрузке или обновлении главной страницы чата.
     '''
     if valid_request(request.user):
-        messages = ChatMessage.objects.order_by('id'[:20])
+        messages = ChatMessage.objects.order_by('-id')[:20]
         return JsonResponse({
             'count': len(messages),
-            'lastID': messages.last().id,
-            'messages': [ {'id': msg.id, 'author': msg.msgAuthor.username, 'text': msg.msgText} for msg in messages]
+            'lastID': messages.first().id,
+            'messages': list(reversed([ {'id': msg.id, 'username': msg.msgAuthor.username, 'text': msg.msgText} for msg in messages]))
         })
-        #messages = ['{},{}'.format(msg.msgText, msg.msgAuthor) for msg in ChatMessage.objects.order_by('id')[:20]]
-        #messages = str(len(messages)) + '\n' + '\n'.join(messages) + '\n' + str(ChatMessage.objects.last().id)
-        #return HttpResponse(messages)
     else:
         return HttpResponse('FAIL') 
 
@@ -76,7 +71,6 @@ def last_messages(request):
 def users_online(request):
     sessions = Session.objects.all()
     data = {}
-    #users = User.objects.all()
     for session in sessions:
         decoded = session.get_decoded()
         uid = decoded['_auth_user_id']

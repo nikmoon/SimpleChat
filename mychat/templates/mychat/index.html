@@ -1,6 +1,4 @@
-{% extends "mychat/base.html" %}
 {% load staticfiles %}
-{% block head %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -21,7 +19,7 @@
 {% endcomment %}
 			</div>
 			<div id="edit-area" class="black-bordered">
-				<form method="post" action="/tornado/sendmsg">
+				<form method="post" action="/chat/new-message">
 					{% csrf_token %}
 					<input id="btn-send-msg" type="submit" value="Отправить" name="btn-send-msg"/>
 					<textarea id="edit-window" name="edit-window"></textarea>
@@ -45,14 +43,11 @@
 			</div>
 		</div>
 
-		{% block scripts %}
 		<script src="{% static "mychat/jquery-3.1.0.min.js" %}"></script>
 		<script src="{% static "mychat/main.js" %}"></script>
-		{% endblock %}
 	{% else %}
         <h3>Чтобы воспользоваться чатом, необходимо пройти аутентификацию</h3>
         <a href="/">На главную</a>
     {% endif %}
 </body>
 </html>
-{% endblock head %}

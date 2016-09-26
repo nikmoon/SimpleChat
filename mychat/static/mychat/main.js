@@ -1,15 +1,18 @@
-"use strict"
 
-
-var waitMsgURL = '/tornado/waitmsg';
-var lastMsgID;
 
 
 
 $(document).ready(function(){
 
-	alert('Алерт мать вашу)');
-	return;
+	"use strict"
+
+	var waitMsgURL = '/tornado/waitmsg';
+	var lastMsgID;
+
+
+	var waitTimeout = 0;
+	var timeoutStep = 5000;
+
 
 	// получим последние 20 сообщений с сервера
 	var xhr = new XMLHttpRequest();
@@ -17,30 +20,46 @@ $(document).ready(function(){
 	xhr.send();
 	var messages = JSON.parse(xhr.responseText);
 	var msgDiv = $('#messages');
+	lastMsgID = messages.lastID;
 	messages.messages.forEach(function(msg, i, arr){
-		msgDiv.append('<p>' + msg.author + '<br />' + msg.text + '</p>');
+		msgDiv.append('<p>' + msg.username + ' ' + msg.id + '<br />' + msg.text + '</p>');
 	})
+	msgDiv.scrollTop(msgDiv[0].scrollHeight);
+
 
 	function subscribe() {
 		var xhr = new XMLHttpRequest();
-		xhr.timeout = 100;
+		xhr.timeout = 10000;
 		xhr.ontimeout = function() {
 			console.log('Закрываем соединение по таймауту');
 			subscribe();
 		}
 		xhr.onreadystatechange = function() {
-			console.log('readyState: ' + this.readyState + '  status: ' + this.status + ' statusText: ' + this.statusText + ' responseText: ' + this.responseText);
+			var messages;
+			console.log('readyState: ' + this.readyState + '  status: ' + this.status + ' statusText: ' + this.statusText);
 			if (this.readyState != 4 || this.status == 0) return;
+
 			if (this.status == 500) {
-				setTimeout(subscribe, 5000);
+				if (waitTimeout < 15000) {
+					waitTimeout += timeoutStep;
+				}
+				console.log('wait for ' + waitTimeout.toString());
+				setTimeout(subscribe, waitTimeout);
 				return;
 			}
+
 			if (this.status == 200) {
-				msgDiv.append('<p>' + this.responseText + '</p>');
+				waitTimeout = 0;
+				messages = JSON.parse(this.responseText);
+				lastMsgID = messages.lastID;
+				messages.messages.forEach(function(msg, i, arr){
+					msgDiv.append('<p>' + msg.username + ' ' + msg.id + '<br />' + msg.text + '</p>');
+				})
+				msgDiv.scrollTop(msgDiv[0].scrollHeight);
 			}
 			subscribe();
 		}
-		xhr.open('GET', waitMsgURL, true);
+		xhr.open('GET', waitMsgURL + '?lastid=' + lastMsgID, true);
 		xhr.send();
 	}
 

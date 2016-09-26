@@ -6,6 +6,7 @@ from tornado.httpclient import HTTPClient, AsyncHTTPClient, HTTPRequest
 from tornado.queues import Queue
 from comet_secret import AUTH_SECRET
 
+import json
 
 '''
     Словарь аутентифицированных в Django пользователей.
@@ -21,6 +22,7 @@ waiters = []
 msgQueue = Queue(maxsize=10)
 msgBuffer = []
 msgLastID = 0
+
 
 
 import sys
@@ -44,13 +46,14 @@ def send_message():
     global waiters, msgLastID
     while 1:
         msg = yield msgQueue.get()
-        print('Рассылаем сообщение: ' + msg[0])
+        print('Рассылаем сообщение: ' + msg['text'])
         for waiter in waiters:
             print('Отослали.')
             waiter.set_result(msg)
         waiters = []
-        msgLastID = msg[1]
+        msgLastID = msg['id']
         msgBuffer.append(msg)
+        msgQueue.task_done()
 
 
 class UserLogin(tornado.web.RequestHandler):
@@ -84,6 +87,43 @@ class UserLogout(tornado.web.RequestHandler):
         self.write(result)
 
 
+
+class WaitMessage(tornado.web.RequestHandler):
+    '''
+    Обработчик соединений клиентов, ожидающих получить новые сообщения чата
+    Клиент передает свой в cookies свой 'sessionid', в теле сообщения ID последнего сообщения, которое у
+    него есть
+    '''
+    @gen.coroutine
+    def get(self):
+        sid = get_sid(self)
+        if sid is not None:
+            clientLastMsgID = int(self.get_argument('lastid'))
+            if clientLastMsgID < msgLastID:
+                # получаем и отправляем клиенту все сообщения, начиная с clientLastMsgID+1
+                newMsgList = msgBuffer[clientLastMsgID - msgLastID:]
+                self.write(json.dumps({
+                    'count': len(newMsgList),
+                    'lastID': newMsgList[-1]['id'],
+                    'medssages': newMsgList,
+                })
+                )
+                return
+            waiters.append(Future())
+            self.future = waiters[-1]
+            msg = yield waiters[-1]
+            self.write(json.dumps({
+                'count': 1,
+                'lastID': msg['id'],
+                'messages': [msg]
+            })
+            )
+        else:
+            self.set_status(403)
+            self.write('Этот ресурс Вам не доступен')
+
+
+
 class MessageWait(tornado.web.RequestHandler):
     @gen.coroutine
     def get(self):
@@ -104,6 +144,25 @@ class MessageWait(tornado.web.RequestHandler):
         self.future.set_result([])
 
 
+class SendMessage(tornado.web.RequestHandler):
+    @gen.coroutine
+    def post(self):
+        try:
+            msg = json.loads(self.request.body.decode('utf-8'))
+            if msg['secret'] != AUTH_SECRET:
+                print('Invalid secret')
+                self.write('FAILED')
+                return
+            yield msgQueue.put({
+                'id': msg['id'],
+                'text': msg['text'],
+                'username': authUsers[sid],
+            })
+            self.write('OK')
+        except Exception:
+            self.write('FAILED')
+
+
 class MessageSender(tornado.web.RequestHandler):
     @gen.coroutine
     def post(self):
@@ -111,7 +170,11 @@ class MessageSender(tornado.web.RequestHandler):
         try:
             secret, sid, msgText, msgID = self.request.body.decode('utf-8').split('\n', 3)
             if secret == AUTH_SECRET:
-                yield msgQueue.put(['Сообщение: ' + msgText, msgID])
+                yield msgQueue.put({
+                    'id': msgID,
+                    'text': msgText,
+                    'username': authUsers[sid]
+                })
             result = 'OK'
         except Exception:
             pass
@@ -131,8 +194,10 @@ if __name__ == '__main__':
     app = tornado.web.Application([
         (r"/tornado/login", UserLogin),
         (r"/tornado/logout", UserLogout),
-        (r"/tornado/sendmsg", MessageSender),
-        (r"/tornado/waitmsg", MessageWait),
+        #(r"/tornado/sendmsg", MessageSender),
+        #(r"/tornado/waitmsg", MessageWait),
+        (r"/tornado/sendmsg", SendMessage),
+        (r"/tornado/waitmsg", WaitMessage),
     ])
     app.listen(8889)
     tornado.ioloop.IOLoop.current().add_callback(send_message)
