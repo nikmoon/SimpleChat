@@ -13,7 +13,7 @@ from comet_secret import AUTH_SECRET
 
 
 def index(request):
-    return redirect(mylogin)
+    return redirect(login_view)
 
 
 class LoginForm(forms.Form):
@@ -51,8 +51,10 @@ def say_to_tornado(request, action):
 
 def login_view(request):
     if request.user.is_authenticated():
-        return render(request, 'myauth/logged.html')
-#        return HttpResponseRedirect(request.GET.get("next", "/"))
+        if request.method == 'GET':
+            return render(request, 'myauth/logged.html')
+        else:
+            return HttpResponseRedirect(request.GET.get("next", ""))
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -62,7 +64,7 @@ def login_view(request):
             if user is not None:
                 auth.login(request, user)
                 #say_to_tornado(request, '/login')
-                print(request.POST.get('next', '/'))
+                print(type(request.POST.get('next', '/')))
                 return HttpResponseRedirect(request.POST.get("next", "/"))
     else:
         form = LoginForm()

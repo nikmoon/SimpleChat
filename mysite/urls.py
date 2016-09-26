@@ -17,11 +17,12 @@ from django.contrib import admin
 
 import mainpage.views
 import myauth.urls
+import mychat.urls
 
 
 urlpatterns = [
     url(r'^$', mainpage.views.index),
     url(r'^auth/', include(myauth.urls)),
-#    url(r'^chat/', include(mychat.urls)),
-#    url(r'^admin/', include(admin.site.urls)),
+    url(r'^chat/', include(mychat.urls)),
+    url(r'^admin/', include(admin.site.urls)),
 ]
