@@ -14,13 +14,14 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
-from mymain.views import index
+
+import mainpage.views
 import myauth.urls
-import mychat.urls
+
 
 urlpatterns = [
-    url(r'^$', index),
+    url(r'^$', mainpage.views.index),
     url(r'^auth/', include(myauth.urls)),
-    url(r'^chat/', include(mychat.urls)),
-    url(r'^admin/', include(admin.site.urls)),
+#    url(r'^chat/', include(mychat.urls)),
+#    url(r'^admin/', include(admin.site.urls)),
 ]

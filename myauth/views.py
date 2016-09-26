@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect
 from django import forms
 
-import django.contrib.auth as auth
+from django.contrib import auth
 from django.core.urlresolvers import reverse
 
 from tornado.httpclient import HTTPClient
@@ -13,27 +13,27 @@ from comet_secret import AUTH_SECRET
 
 
 def index(request):
-    return redirect(mylogin, permanent=True)
+    return redirect(mylogin)
 
 
-class NameForm(forms.Form):
-    f_username = forms.CharField(label="Имя", max_length=100)
-    f_password = forms.CharField(label="Пароль", max_length=100, widget=forms.PasswordInput)
+class LoginForm(forms.Form):
+    logName = forms.CharField(label="Имя", max_length=100)
+    logPassword = forms.CharField(label="Пароль", max_length=100, widget=forms.PasswordInput)
 
 
 class RegistrationForm(forms.Form):
-    userName = forms.CharField(50, label='Имя')
-    userPassw1 = forms.CharField(50, label='Пароль', widget=forms.PasswordInput)
-    userPassw2 = forms.CharField(50, label='Повтор пароля', widget=forms.PasswordInput)
+    regName = forms.CharField(50, label='Имя')
+    regPassw1 = forms.CharField(50, label='Пароль', widget=forms.PasswordInput)
+    regPassw2 = forms.CharField(50, label='Повтор пароля', widget=forms.PasswordInput)
 
     def clean(self):
         super(RegistrationForm, self).clean()
         if self.errors:
             return
 
-        userName = self.cleaned_data['userName']
-        userPassw1 = self.cleaned_data['userPassw1']
-        userPassw2 = self.cleaned_data['userPassw2']
+        regName = self.cleaned_data['regName']
+        regPassw1 = self.cleaned_data['regPassw1']
+        regPassw2 = self.cleaned_data['regPassw2']
         if userPassw1 == userPassw2:
             try:
                 self.user = auth.models.User.objects.create_user(userName, password=userPassw1)
@@ -49,24 +49,30 @@ def say_to_tornado(request, action):
     result = HTTPClient().fetch(actionUrl, method='POST', body='{}\n{}\n{}'.format(AUTH_SECRET, request.session.session_key, request.user.username))
 
 
-def mylogin(request):
+def login_view(request):
     if request.user.is_authenticated():
-        return HttpResponseRedirect(request.GET.get("next", "/"))
+        return render(request, 'myauth/logged.html')
+#        return HttpResponseRedirect(request.GET.get("next", "/"))
     if request.method == 'POST':
-        form = NameForm(request.POST)
+        form = LoginForm(request.POST)
         if form.is_valid():
-            user = auth.authenticate(username=form.cleaned_data['f_username'], password=form.cleaned_data['f_password'])
+            logName = form.cleaned_data['logName']
+            logPassword = form.cleaned_data['logPassword']
+            user = auth.authenticate(username=logName, password=logPassword)
             if user is not None:
                 auth.login(request, user)
-                say_to_tornado(request, '/login')
+                #say_to_tornado(request, '/login')
+                print(request.POST.get('next', '/'))
                 return HttpResponseRedirect(request.POST.get("next", "/"))
     else:
-        form = NameForm()
+        form = LoginForm()
     return render(request, 'myauth/login.html', {'form': form})
 
 
-def mylogout(request):
-    say_to_tornado(request, '/logout')
+def logout_view(request):
+    if not request.user.is_authenticated():
+        return HttpResponse()
+    #say_to_tornado(request, '/logout')
     auth.logout(request)
     return HttpResponseRedirect("/")
 
