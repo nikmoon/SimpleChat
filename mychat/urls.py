@@ -20,6 +20,6 @@ urlpatterns = [
     url(r'^$', views.index),
     url(r'^new-message$', views.new_message),
     url(r'^last-messages$', views.last_messages),
-    url(r'^users-online$', views.users_online),
+    url(r'^users-logged$', views.users_logged),
     url(r'^test-template$', views.test_template),
 ]

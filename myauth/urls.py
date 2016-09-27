@@ -20,6 +20,6 @@ urlpatterns = [
     url(r'^$', views.index),
     url(r'^login$', views.login_view),
     url(r'^logout$', views.logout_view),
-    url(r'^register$', views.reg_view),
-    url(r'^get-user-info$', views.get_user_info),
+    url(r'^registration$', views.registration_view),
+    url(r'^info$', views.info_view),
 ]

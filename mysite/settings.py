@@ -24,8 +24,9 @@ SECRET_KEY = 'mr!8^=o5fo9-#s%+jd99ivgc%743)^t)ip-rn8slo8z7hyt=0$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+#DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -102,9 +103,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = '/static/mysite/'
 
 
-LOGIN_URL = '/auth/login/'
+LOGIN_URL = '/auth/login'
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

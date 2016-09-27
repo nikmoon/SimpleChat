@@ -1,62 +1,38 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseRedirect
-from django import forms
-
-from django.contrib import auth
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, JsonResponse
+from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
+from django.contrib import auth
 
 from tornado.httpclient import HTTPClient
 from comet_secret import AUTH_SECRET
+
+from . import forms
 
 
 # Create your views here.
 
 
 def index(request):
-    return redirect(login_view)
+    if request.user.is_authenticated():
+        return HttpResponseRedirect('/')
+    else:
+        return redirect(login_view)
 
-
-class LoginForm(forms.Form):
-    logName = forms.CharField(label="Имя", max_length=100)
-    logPassword = forms.CharField(label="Пароль", max_length=100, widget=forms.PasswordInput)
-
-
-class RegistrationForm(forms.Form):
-    regName = forms.CharField(50, label='Имя')
-    regPassw1 = forms.CharField(50, label='Пароль', widget=forms.PasswordInput)
-    regPassw2 = forms.CharField(50, label='Повтор пароля', widget=forms.PasswordInput)
-
-    def clean(self):
-        super(RegistrationForm, self).clean()
-        if self.errors:
-            return
-
-        regName = self.cleaned_data['regName']
-        regPassw1 = self.cleaned_data['regPassw1']
-        regPassw2 = self.cleaned_data['regPassw2']
-        if userPassw1 == userPassw2:
-            try:
-                self.user = auth.models.User.objects.create_user(userName, password=userPassw1)
-            except Exception:
-                raise forms.ValidationError('Пользователь с таким именем уже существует. Пожалуйста, выберите другое имя')
-        else:
-            self.add_error('userPassw1', forms.ValidationError('Пароли не совпадают'))
-
-
-
+'''
 def say_to_tornado(request, action):
     actionUrl = 'http://127.0.0.1:8889/tornado' + action
     result = HTTPClient().fetch(actionUrl, method='POST', body='{}\n{}\n{}'.format(AUTH_SECRET, request.session.session_key, request.user.username))
+'''
 
 
 def login_view(request):
     if request.user.is_authenticated():
-        if request.method == 'GET':
-            return render(request, 'myauth/logged.html')
-        else:
-            return HttpResponseRedirect(request.GET.get("next", ""))
-    if request.method == 'POST':
-        form = LoginForm(request.POST)
+        return HttpResponseRedirect('/')
+    if request.method == 'GET':
+        form = forms.LoginForm()
+    elif request.method == 'POST':
+        form = forms.LoginForm(request.POST)
         if form.is_valid():
             logName = form.cleaned_data['logName']
             logPassword = form.cleaned_data['logPassword']
@@ -64,36 +40,36 @@ def login_view(request):
             if user is not None:
                 auth.login(request, user)
                 #say_to_tornado(request, '/login')
-                print(type(request.POST.get('next', '/')))
-                return HttpResponseRedirect(request.POST.get("next", "/"))
+                return HttpResponseRedirect(request.POST.get('next', '/'))
     else:
-        form = LoginForm()
+        return HttpResponseNotAllowed(['GET', 'POST'], 'Недопустимый метод')
+
     return render(request, 'myauth/login.html', {'form': form})
 
 
 def logout_view(request):
-    if not request.user.is_authenticated():
-        return HttpResponse()
-    #say_to_tornado(request, '/logout')
-    auth.logout(request)
+    if request.user.is_authenticated():
+        #say_to_tornado(request, '/logout')
+        auth.logout(request)
     return HttpResponseRedirect("/")
 
 
-def reg_view(request):
+def registration_view(request):
     if request.method == 'POST':
-        form = RegistrationForm(request.POST)
+        form = forms.RegistrationForm(request.POST)
         if form.is_valid():
-            return HttpResponseRedirect(reverse(mylogin))
+            return HttpResponseRedirect(reverse(login_view))
     else:
-        form = RegistrationForm()
-    return render(request, 'myauth/register.html', {'form': form})
+        form = forms.RegistrationForm()
+    return render(request, 'myauth/registration.html', {'form': form})
 
 
-from django.core.exceptions import PermissionDenied
-def get_user_info(request):
+def info_view(request):
     if request.user.is_authenticated():
-        userName = request.user.username
-        sid = request.session.session_key
-        return HttpResponse('{}\n{}'.format(userName, sid))
+        data = {
+            'username': request.user.username,
+            'sid': request.session.session_key,
+        }
+        return JsonResponse(data)
     else:
         raise PermissionDenied()
