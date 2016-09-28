@@ -62,7 +62,7 @@ div#edit-area {
     padding: 5px;
 }
 
-input#btn-send-msg {
+input#btnSendMsg {
     position: absolute;
     width: 20%;
     bottom: 0;
@@ -75,7 +75,7 @@ form {
     height: 100%;
 }
 
-textarea#edit-window {
+textarea#msgText {
     display: block;
     box-sizing: border-box;
     width: 80%;

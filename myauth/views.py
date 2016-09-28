@@ -66,10 +66,9 @@ def registration_view(request):
 
 def info_view(request):
     if request.user.is_authenticated():
-        data = {
+        return JsonResponse({
             'username': request.user.username,
             'sid': request.session.session_key,
-        }
-        return JsonResponse(data)
+        })
     else:
         raise PermissionDenied()

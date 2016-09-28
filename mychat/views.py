@@ -22,9 +22,9 @@ import json
 @login_required
 def index(request):
     return render(request, 'mychat/index.html', 
-        {
-            'userList': User.objects.all(),
-        }
+#        {
+#            'userList': User.objects.all(),
+#        }
     )
 
 
@@ -33,19 +33,20 @@ def new_message(request):
     if not request.user.is_authenticated():
         raise PermissionDenied()
 
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'], 'Недопустимый метод')
+#    if request.method != 'POST':
+#        return HttpResponseNotAllowed(['POST'], 'Недопустимый метод')
 
-    text = request.POST['edit-window']
-    newMessage = ChatMessage.objects.create(msgText=text, msgAuthor=request.user)
-    cometMsg = json.dumps({'secret': AUTH_SECRET, 'id': newMessage.id, 'text': text, 'username': request.user.username})
-    sendResponse = HTTPClient().fetch('http://127.0.0.1/tornado/sendmsg', method='POST', body=cometMsg)
-    return HttpResponse(sendResponse.body)
+#    text = request.POST['edit-window']
+#    newMessage = ChatMessage.objects.create(msgText=text, msgAuthor=request.user)
+#    cometMsg = json.dumps({'secret': AUTH_SECRET, 'id': newMessage.id, 'text': text, 'username': request.user.username})
+#    sendResponse = HTTPClient().fetch('http://127.0.0.1/tornado/sendmsg', method='POST', body=cometMsg)
+#    return HttpResponse(sendResponse.body)
+    return HttpResponse('123')
 
 
 def last_messages(request):
     '''
-        Возвращается максимум 20 последних сообщений.
+    20 последних сообщений из базы.
     '''
     if not request.user.is_authenticated():
         raise PermissionDenied()

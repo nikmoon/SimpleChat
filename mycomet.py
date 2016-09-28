@@ -25,7 +25,6 @@ msgLastID = 0
 
 
 
-import sys
 from tornado.escape import json_decode
 response = HTTPClient().fetch('http://127.0.0.1/chat/users-online')
 data = json_decode(response.body)

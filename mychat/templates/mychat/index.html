@@ -7,43 +7,40 @@
     <link rel="stylesheet" type="text/css" href="{% static "mychat/main.css" %}">
 </head>
 <body>
-    {% if request.user.is_authenticated %}
-		<div id="working-area" class="black-bordered">
-			
-            <div id="messages" class="black-bordered">
-			</div>
+    <div id="working-area" class="black-bordered">
+        
+        <div id="messages" class="black-bordered">
+        </div>
 
-            <div id="edit-area" class="black-bordered">
-				<form method="post" action="/chat/new-message">
-					{% csrf_token %}
-					<input id="btn-send-msg" type="submit" value="Отправить" name="btn-send-msg"/>
-					<textarea id="edit-window" name="edit-window"></textarea>
-				</form>
-			</div>
-		</div>
+        <div id="edit-area" class="black-bordered">
+            <form id="msgForm" action="/chat/new-message">
+                {# {% csrf_token %} #}
+                <input id="btnSendMsg" type="submit" value="Отправить"/>
+                <textarea id="msgText"></textarea>
+            </form>
+        </div>
+    </div>
 
-		<div id="info-area" class="black-bordered">
+    <div id="info-area" class="black-bordered">
 
-			<div id="user-info" class="black-bordered">
-				Здесь будет информация о пользователе, вот так то.
-			</div>
+        <div id="user-info" class="black-bordered">
+            Здесь будет информация о пользователе, вот так то.
+        </div>
 
-			<div id="users-list" class="black-bordered">
-				Список пользователей:
-				<ol>
-				{% for username in userList %}
-					<li>{{ username }}</li>
-				{% endfor %}
-				</ol>
-			</div>
-		</div>
+        <div id="users-list" class="black-bordered">
+            Список пользователей:
+            {% if userList %}
+                <ol>
+                {% for username in userList %}
+                    <li>{{ username }}</li>
+                {% endfor %}
+                </ol>
+            {% endif %}
+        </div>
+    </div>
 
-		<script src="{% static 'mychat/jquery-3.1.0.min.js' %}"></script>
-		<script src="{% static 'mychat/main.js' %}"></script>
-	
-    {% else %}
-        <h3>Чтобы воспользоваться чатом, необходимо пройти аутентификацию</h3>
-        <a href="/">На главную</a>
-    {% endif %}
+    <script src="{% static 'mychat/jquery-3.1.0.min.js' %}"></script>
+    <script src="{% static 'mychat/main.js' %}"></script>
+    
 </body>
 </html>
