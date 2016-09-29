@@ -15,7 +15,7 @@ import json
     Аналогичная ситуация с завершением сессии.
     Формат записи: 'sessionid': [username, [...|], где ... - асинхронные запросы данного пользователя.
 '''
-authUsers = {}
+#authUsers = {}
 
 waiters = []
 
@@ -24,18 +24,20 @@ msgBuffer = []
 msgLastID = 0
 
 
-
+'''
 from tornado.escape import json_decode
 response = HTTPClient().fetch('http://127.0.0.1/chat/users-online')
 data = json_decode(response.body)
 for sid in data:
     authUsers[sid] = data[sid]
 print(authUsers)
-
+'''
 
 
 def get_sid(requestHandler):
     sid = requestHandler.get_cookie('sessionid')
+    print(sid)
+    return sid
     return sid if sid in authUsers else None
 
 
@@ -45,13 +47,13 @@ def send_message():
     global waiters, msgLastID
     while 1:
         msg = yield msgQueue.get()
-        print('Рассылаем сообщение: ' + msg['text'])
+        msgBuffer.append(msg)
+        print('Рассылаем сообщение: ' + str(msg))
         for waiter in waiters:
             print('Отослали.')
             waiter.set_result(msg)
         waiters = []
         msgLastID = msg['id']
-        msgBuffer.append(msg)
         msgQueue.task_done()
 
 
@@ -96,33 +98,36 @@ class WaitMessage(tornado.web.RequestHandler):
     @gen.coroutine
     def get(self):
         sid = get_sid(self)
-        if sid is not None:
-            clientLastMsgID = int(self.get_argument('lastid'))
-            if clientLastMsgID < msgLastID:
-                # получаем и отправляем клиенту все сообщения, начиная с clientLastMsgID+1
-                newMsgList = msgBuffer[clientLastMsgID - msgLastID:]
-                self.write(json.dumps({
-                    'count': len(newMsgList),
-                    'lastID': newMsgList[-1]['id'],
-                    'medssages': newMsgList,
-                })
-                )
-                return
-            waiters.append(Future())
-            self.future = waiters[-1]
-            msg = yield waiters[-1]
-            self.write(json.dumps({
-                'count': 1,
-                'lastID': msg['id'],
-                'messages': [msg]
-            })
-            )
-        else:
+        if not sid:
             self.set_status(403)
-            self.write('Этот ресурс Вам не доступен')
+            self.write('Вы не авторизованы и не можете получать сообщения чата')
+            return
+
+        clientLastMsgID = int(self.get_argument('lastid'))
+        if clientLastMsgID < msgLastID:
+            print('Отправка клиенту предыдущих сообщений')
+            newMsgList = msgBuffer[clientLastMsgID - msgLastID:]
+            self.write(json.dumps({
+                'count': len(newMsgList),
+                'lastID': newMsgList[-1]['id'],
+                'messages': newMsgList,
+            }))
+            return
+        self.future = Future()
+        waiters.append(self.future)
+        msg = yield self.future
+        self.write(json.dumps({
+            'count': 1,
+            'lastID': msg['id'],
+            'messages': [msg]
+        })
+        )
+
+    def on_connection_close(self):
+        print('Connection closed by client')
 
 
-
+'''
 class MessageWait(tornado.web.RequestHandler):
     @gen.coroutine
     def get(self):
@@ -141,6 +146,7 @@ class MessageWait(tornado.web.RequestHandler):
         print('Соединение разорвано')
         waiters.remove(self.future)
         self.future.set_result([])
+'''
 
 
 class SendMessage(tornado.web.RequestHandler):
@@ -150,18 +156,16 @@ class SendMessage(tornado.web.RequestHandler):
             msg = json.loads(self.request.body.decode('utf-8'))
             if msg['secret'] != AUTH_SECRET:
                 print('Invalid secret')
-                self.write('FAILED')
+                self.set_status(403)
+                self.write('Вам запрещено пользоваться данным сервисом')
                 return
-            yield msgQueue.put({
-                'id': msg['id'],
-                'text': msg['text'],
-                'username': authUsers[sid],
-            })
+            del msg['secret']
+            yield msgQueue.put(msg)
             self.write('OK')
         except Exception:
-            self.write('FAILED')
+            self.write('Исключительная ситуация при получении сообщения comet-сервером')
 
-
+'''
 class MessageSender(tornado.web.RequestHandler):
     @gen.coroutine
     def post(self):
@@ -178,6 +182,7 @@ class MessageSender(tornado.web.RequestHandler):
         except Exception:
             pass
         self.write(result)
+'''
 
 '''
     @gen.coroutine
@@ -193,8 +198,6 @@ if __name__ == '__main__':
     app = tornado.web.Application([
         (r"/tornado/login", UserLogin),
         (r"/tornado/logout", UserLogout),
-        #(r"/tornado/sendmsg", MessageSender),
-        #(r"/tornado/waitmsg", MessageWait),
         (r"/tornado/sendmsg", SendMessage),
         (r"/tornado/waitmsg", WaitMessage),
     ])

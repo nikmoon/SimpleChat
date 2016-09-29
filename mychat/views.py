@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, HttpResponseNotAllowed
+from django.http import HttpResponseServerError
 from django.contrib import auth
 from django.core.exceptions import PermissionDenied
 
@@ -33,15 +34,21 @@ def new_message(request):
     if not request.user.is_authenticated():
         raise PermissionDenied()
 
-#    if request.method != 'POST':
-#        return HttpResponseNotAllowed(['POST'], 'Недопустимый метод')
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'], 'Недопустимый метод')
 
-#    text = request.POST['edit-window']
-#    newMessage = ChatMessage.objects.create(msgText=text, msgAuthor=request.user)
-#    cometMsg = json.dumps({'secret': AUTH_SECRET, 'id': newMessage.id, 'text': text, 'username': request.user.username})
-#    sendResponse = HTTPClient().fetch('http://127.0.0.1/tornado/sendmsg', method='POST', body=cometMsg)
-#    return HttpResponse(sendResponse.body)
-    return HttpResponse('123')
+    msg = request.body.decode('utf-8')
+    username = request.user.username
+
+    newMessage = ChatMessage.objects.create(msgText=msg, msgAuthor=request.user)
+
+    cometMsg = json.dumps({'secret': AUTH_SECRET, 'id': newMessage.id, 'text': msg, 'username': username})
+    try:
+        cometResponse = HTTPClient().fetch('http://127.0.0.1/tornado/sendmsg', method='POST', body=cometMsg)
+        return HttpResponse(cometResponse.body)
+    except Exception:
+        print('Исключительная ситуация')
+        return HttpResponseServerError('Нет ответа от comet-сервера')
 
 
 def last_messages(request):

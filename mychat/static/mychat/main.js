@@ -3,51 +3,81 @@ $(document).ready(function(){
 
     "use strict"
 
-    var waitMsgURL = '/tornado/waitmsg';
-    var lastMsgID, msgDiv;
-
-    msgDiv = $('#messages');
+    var waitMsgURL = '/tornado/waitmsg?lastid=';
+    var lastMsgID;
+    var msgDiv = $('#messages'),
+        msgForm = $('#msgForm'),
+        formActionURL = msgForm.attr('action'),
+        msgText = $('#msgText');
 
     var waitTimeout = 0;
     var timeoutStep = 5000;
 
-    $('#msgForm').submit(function(event) {
+    msgForm.submit(function(event) {
         event.preventDefault();
-
-        var form = $(this)
-        var msgText = $('#msgText').val();
-        var url = form.attr('action');
-
+        var msg = msgText.val()
         var xhr = new XMLHttpRequest();
-        xhr.open('post', url, true);
+        xhr.open('POST', formActionURL, true);
         xhr.onreadystatechange = function() {
+            console.log('state: ' + this.readyState + '  status: ' + this.status);
             if (this.readyState != 4 || this.status == 0) return;
             if (this.status == 200) {
-                msgDiv.append('<p>' + 'yours' + ' ' + '<br />' + msgText + '</p>');
-                msgDiv.scrollTop(msgDiv[0].scrollHeight);
+                //msgDiv.append('<p>' + 'yours' + ' ' + '<br />' + msg + '</p>');
+                //msgDiv.scrollTop(msgDiv[0].scrollHeight);
             }
         }
-        xhr.send(msgText);
+        xhr.send(msg);
     })
 
 
     // получим последние 20 сообщений с сервера
-    var xhr, messages;
+    var xhr, msgData;
 
     xhr = new XMLHttpRequest();
     xhr.open('get', '/chat/last-messages', false);
     xhr.send();
-    messages = JSON.parse(xhr.responseText);
-    lastMsgID = messages.lastID;
-//  messages.messages.forEach(function(msg, i, arr){
-//      msgDiv.append('<p>' + msg.username + ' ' + msg.id + '<br />' + msg.text + '</p>');
-//  })
-    var msg = messages.messages;
-    for (var key in msg) {
-        msgDiv.append('<p>' + msg[key].user + ' ' + key + '<br />' + msg[key].text + '</p>');
+    msgData = JSON.parse(xhr.responseText);
+    lastMsgID = msgData.lastID;
+    var messages = msgData.messages;
+    for (var key in messages) {
+        msgDiv.append('<p>' + messages[key].user + ' ' + key + '<br />' + messages[key].text + '</p>');
     }
     msgDiv.scrollTop(msgDiv[0].scrollHeight);
 
+    function start_polling() {
+        var xhr;
+
+        function wait_new_messages() {
+        
+            xhr = new XMLHttpRequest();           
+            xhr.onreadystatechange = function() {
+                if (this.readyState != 4 || this.status == 0) return;
+
+                if (this.status == 200) {
+                    messages = JSON.parse(this.responseText);
+                    messages.messages.forEach(function(msg, i, arr){
+                        msgDiv.append('<p>' + msg.username + ' ' + msg.id + '<br />' + msg.text + '</p>');
+                    })
+                    msgDiv.scrollTop(msgDiv[0].scrollHeight);
+                    lastMsgID = messages.lastID;
+
+                    wait_new_messages();
+                }
+ 
+            }
+
+            xhr.open('GET', waitMsgURL + lastMsgID, true);
+            xhr.send();
+        }
+
+        wait_new_messages();
+
+    }
+
+    start_polling();
+});
+
+/*
     return;
 
     function subscribe() {
@@ -87,9 +117,7 @@ $(document).ready(function(){
     }
 
     subscribe();
-
-});
-
+*/
 /*
 var myModule = (function() {
 
