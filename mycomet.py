@@ -133,7 +133,7 @@ class WaitMessage(tornado.web.RequestHandler):
 
     def on_connection_close(self):
         print('Connection closed by client')
-        print('Устанавливаем результат future = None, waitID = '.format(self.waitID))
+        print('Устанавливаем результат future = None, waitID = {}'.format(self.waitID))
         self.future.set_result(None)
 
 

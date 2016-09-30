@@ -45,13 +45,17 @@ $(document).ready(function(){
     msgDiv.scrollTop(msgDiv[0].scrollHeight);
 
     function start_polling() {
-        var xhr;
+        //var xhr;
+        var xhrInfo;
 
         function wait_new_messages() {
         
-            xhr = new XMLHttpRequest();           
+            var xhr = new XMLHttpRequest();           
             xhr.onreadystatechange = function() {
-                console.log('state: ' + this.readyState + '  status: ' + this.status);
+                xhrInfo = 'state: ' + this.readyState + '  status: ' + this.status;
+                console.log(xhrInfo);
+                msgDiv.append(xhrInfo + '<br />');
+                msgDiv.scrollTop(msgDiv[0].scrollHeight);
                 if (this.readyState != 4) return;
 
                 if (this.status == 0) {
@@ -80,7 +84,7 @@ $(document).ready(function(){
                 alert();
             }
 
-            xhr.open('GET', waitMsgURL + lastMsgID, true);
+            xhr.open('GET', waitMsgURL + lastMsgID + '&' + (new Date()).getTime(), true);
             xhr.send();
         }
 
