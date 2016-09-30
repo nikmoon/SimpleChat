@@ -51,7 +51,13 @@ $(document).ready(function(){
         
             xhr = new XMLHttpRequest();           
             xhr.onreadystatechange = function() {
-                if (this.readyState != 4 || this.status == 0) return;
+                console.log('state: ' + this.readyState + '  status: ' + this.status);
+                if (this.readyState != 4) return;
+
+                if (this.status == 0) {
+                    console.log('XHR wait messages error');
+                    return;
+                }
 
                 if (this.status == 200) {
                     messages = JSON.parse(this.responseText);
@@ -62,8 +68,16 @@ $(document).ready(function(){
                     lastMsgID = messages.lastID;
 
                     wait_new_messages();
+                    return;
+                }
+                
+                if (this.status == 504) {
+                    wait_new_messages();
                 }
  
+            }
+            xhr.error = function() {
+                alert();
             }
 
             xhr.open('GET', waitMsgURL + lastMsgID, true);

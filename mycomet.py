@@ -50,8 +50,10 @@ def send_message():
         msgBuffer.append(msg)
         print('Рассылаем сообщение: ' + str(msg))
         for waiter in waiters:
-            print('Отослали.')
-            waiter.set_result(msg)
+            if not waiter.done():
+                waiter.set_result(msg)
+            else:
+                print('Пропускаем уже установленный future')
         waiters = []
         msgLastID = msg['id']
         msgQueue.task_done()
@@ -115,7 +117,13 @@ class WaitMessage(tornado.web.RequestHandler):
             return
         self.future = Future()
         waiters.append(self.future)
+        self.waitID = len(waiters) - 1
+        print('Добавился ожидающий {}, всего: {}'.format(self.waitID, len(waiters)))
         msg = yield self.future
+        if not msg:
+            print('Для waitID = {} пропускаем отправку сообщения = {}'.format(self.waitID, str(msg)))
+            return
+        print('Cообщение отправлено клиенту {} : {}'.format(self.waitID, str(msg)))
         self.write(json.dumps({
             'count': 1,
             'lastID': msg['id'],
@@ -125,6 +133,8 @@ class WaitMessage(tornado.web.RequestHandler):
 
     def on_connection_close(self):
         print('Connection closed by client')
+        print('Устанавливаем результат future = None, waitID = '.format(self.waitID))
+        self.future.set_result(None)
 
 
 '''
