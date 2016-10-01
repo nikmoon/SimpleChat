@@ -3,59 +3,71 @@ $(document).ready(function(){
 
     "use strict"
 
-    var waitMsgURL = '/tornado/waitmsg?lastid=';
-    var lastMsgID;
-    var msgDiv = $('#messages'),
+    var waitMsgURL = '/tornado/waitmsg?lastid=',
+        lasMsgURL = '/chat/last-messages',
+        lastMsgID,
+        msgDiv = $('#messages'),
         msgForm = $('#msgForm'),
         formActionURL = msgForm.attr('action'),
         msgText = $('#msgText');
 
-    var waitTimeout = 0;
-    var timeoutStep = 5000;
 
+    // Отправка сообщений нажатием на кнопку
     msgForm.submit(function(event) {
         event.preventDefault();
         var msg = msgText.val()
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', formActionURL, true);
         xhr.onreadystatechange = function() {
             console.log('state: ' + this.readyState + '  status: ' + this.status);
-            if (this.readyState != 4 || this.status == 0) return;
-            if (this.status == 200) {
+            //if (this.readyState != 4 || this.status == 0) return;
+            //if (this.status == 200) {
                 //msgDiv.append('<p>' + 'yours' + ' ' + '<br />' + msg + '</p>');
                 //msgDiv.scrollTop(msgDiv[0].scrollHeight);
-            }
+            //}
         }
+        xhr.open('POST', formActionURL, true);
         xhr.send(msg);
     })
 
 
-    // получим последние 20 сообщений с сервера
-    var xhr, msgData;
+    // 20 последних сообщений с сервера
+    var xhr = new XMLHttpRequest(),
+        msgData, messages;
+    xhr.onreadystatechange = function() {
+        console.log('state: ' + this.readyState + '  status: ' + this.status);
+        if (this.readyState == 4 && this.status == 200) {
+            console.log('Последние сообщения с сервера получены');
+            msgData = JSON.parse(this.responseText);
+            lastMsgID = msgData.lastID;
+            messages = msgData.messages;
+            for (var key in messages) {
+                msgDiv.append('<p>' + messages[key].user + ' ' + key + '<br />' + messages[key].text + '</p>');
+            }
+            msgDiv.scrollTop(msgDiv[0].scrollHeight);
 
-    xhr = new XMLHttpRequest();
-    xhr.open('get', '/chat/last-messages', false);
-    xhr.send();
-    msgData = JSON.parse(xhr.responseText);
-    lastMsgID = msgData.lastID;
-    var messages = msgData.messages;
-    for (var key in messages) {
-        msgDiv.append('<p>' + messages[key].user + ' ' + key + '<br />' + messages[key].text + '</p>');
+            // Можно приступать к long polling
+            start_polling();
+        }
     }
-    msgDiv.scrollTop(msgDiv[0].scrollHeight);
+    xhr.open('get', '/chat/last-messages', true);
+    xhr.send();
+
 
     function start_polling() {
-        //var xhr;
-        var xhrInfo;
+        var xhr,
+            startRequest, endRequest, reqTime,
+            reqErrorTimeout = 5000;
 
         function wait_new_messages() {
         
-            var xhr = new XMLHttpRequest();           
+            xhr = new XMLHttpRequest();           
+            
             xhr.onreadystatechange = function() {
-                xhrInfo = 'state: ' + this.readyState + '  status: ' + this.status;
-                console.log(xhrInfo);
-                msgDiv.append(xhrInfo + '<br />');
-                msgDiv.scrollTop(msgDiv[0].scrollHeight);
+                //var xhrInfo = 'state: ' + this.readyState + '  status: ' + this.status;
+                //console.log(xhrInfo);
+                //msgDiv.append(xhrInfo + '<br />');
+                //msgDiv.scrollTop(msgDiv[0].scrollHeight);
+                
                 if (this.readyState != 4) return;
 
                 if (this.status == 0) {
@@ -72,89 +84,28 @@ $(document).ready(function(){
                     lastMsgID = messages.lastID;
 
                     wait_new_messages();
-                    return;
+
                 }
-                
-                if (this.status == 504) {
-                    wait_new_messages();
+                else {
+                    endRequest = new Date();
+                    reqTime = endRequest - startRequest;
+                    console.log('Сюда попали, прошло: ' + reqTime);
+                    if (reqTime < reqErrorTimeout) {
+                        setTimeout(wait_new_messages, reqErrorTimeout - reqTime + 1000);
+                    }
+                    else {
+                        wait_new_messages();
+                    }
+
                 }
- 
-            }
-            xhr.error = function() {
-                alert();
             }
 
-            xhr.open('GET', waitMsgURL + lastMsgID + '&' + (new Date()).getTime(), true);
+            startRequest = new Date();
+            xhr.open('GET', waitMsgURL + lastMsgID + '&' + startRequest.getTime(), true);
             xhr.send();
         }
 
         wait_new_messages();
-
     }
-
-    start_polling();
 });
 
-/*
-    return;
-
-    function subscribe() {
-        var xhr = new XMLHttpRequest();
-        xhr.timeout = 10000;
-        xhr.ontimeout = function() {
-            console.log('Закрываем соединение по таймауту');
-            subscribe();
-        }
-        xhr.onreadystatechange = function() {
-            var messages;
-            console.log('readyState: ' + this.readyState + '  status: ' + this.status + ' statusText: ' + this.statusText);
-            if (this.readyState != 4 || this.status == 0) return;
-
-            if (this.status == 500) {
-                if (waitTimeout < 15000) {
-                    waitTimeout += timeoutStep;
-                }
-                console.log('wait for ' + waitTimeout.toString());
-                setTimeout(subscribe, waitTimeout);
-                return;
-            }
-
-            if (this.status == 200) {
-                waitTimeout = 0;
-                messages = JSON.parse(this.responseText);
-                lastMsgID = messages.lastID;
-                messages.messages.forEach(function(msg, i, arr){
-                    msgDiv.append('<p>' + msg.username + ' ' + msg.id + '<br />' + msg.text + '</p>');
-                })
-                msgDiv.scrollTop(msgDiv[0].scrollHeight);
-            }
-            subscribe();
-        }
-        xhr.open('GET', waitMsgURL + '?lastid=' + lastMsgID, true);
-        xhr.send();
-    }
-
-    subscribe();
-*/
-/*
-var myModule = (function() {
-
-    var xhr = new XMLHttpRequest();
-
-    xhr.open("post", "/chat/new-message", false);
-//  xhr.send('Примите новое сообщение');
-    if (xhr.responseText) {
-//      alert(xhr.responseText);
-    }
-    else {
-//      alert('Пустой ответ');
-    }
-
-    return {};
-
-})();
-
-alert($);
-*/
-
-//alert(xhr.getAllResponseHeaders());
