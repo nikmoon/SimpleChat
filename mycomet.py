@@ -8,15 +8,6 @@ from comet_secret import AUTH_SECRET
 
 import json
 
-'''
-    Словарь аутентифицированных в Django пользователей.
-    При аутентификации пользователя, Django отправляет comet-серверу sessionid в теле запроса post. Comet-сервер, чтобы убедиться,
-    что sessionid действительно существует, обращается к Django. В случае подтверждения запись добавляется в данный словарь.
-    Аналогичная ситуация с завершением сессии.
-    Формат записи: 'sessionid': [username, [...|], где ... - асинхронные запросы данного пользователя.
-'''
-#authUsers = {}
-
 waiters = []
 
 msgQueue = Queue(maxsize=10)
@@ -24,26 +15,14 @@ msgBuffer = []
 msgLastID = 0
 
 
-'''
-from tornado.escape import json_decode
-response = HTTPClient().fetch('http://127.0.0.1/chat/users-online')
-data = json_decode(response.body)
-for sid in data:
-    authUsers[sid] = data[sid]
-print(authUsers)
-'''
-
-
 def get_sid(requestHandler):
     sid = requestHandler.get_cookie('sessionid')
-    print(sid)
     return sid
-    return sid if sid in authUsers else None
-
 
 
 @gen.coroutine
 def send_message():
+    '''Ждем появления сообщения в очереди, затем рассылаем его всем ожидающим'''
     global waiters, msgLastID
     while 1:
         msg = yield msgQueue.get()
@@ -57,38 +36,6 @@ def send_message():
         waiters = []
         msgLastID = msg['id']
         msgQueue.task_done()
-
-
-class UserLogin(tornado.web.RequestHandler):
-    def post(self):
-        result = 'FAILED'
-        try:
-            secret, sid, userName = self.request.body.decode('utf-8').split('\n', 2)
-            if secret == AUTH_SECRET:
-                authUsers[sid] = userName
-                result = 'OK'
-                print(authUsers)
-        except Exception:
-            pass
-        print('Login: ' + result)
-        self.write(result)
-
-
-
-class UserLogout(tornado.web.RequestHandler):
-    def post(self):
-        result = 'FAILED'
-        try:
-            secret, sid, userName = self.request.body.decode('utf-8').split('\n', 2)
-            if secret == AUTH_SECRET:
-                del authUsers[sid]
-                result = 'OK'
-                print(authUsers)
-        except Exception:
-            pass
-        print('Logout: ' + result)
-        self.write(result)
-
 
 
 class WaitMessage(tornado.web.RequestHandler):
@@ -137,28 +84,6 @@ class WaitMessage(tornado.web.RequestHandler):
         self.future.set_result(None)
 
 
-'''
-class MessageWait(tornado.web.RequestHandler):
-    @gen.coroutine
-    def get(self):
-        sid = get_sid(self)
-        if sid:
-            print('Пришел запрос на ожидание сообщений, sid = ' + sid);
-            future = Future()
-            waiters.append(future)
-            self.future = future
-            msg = yield future
-            self.write('{}\n{}'.format(*msg))
-        else:
-            self.write('FAILED')
-
-    def on_connection_close(self):
-        print('Соединение разорвано')
-        waiters.remove(self.future)
-        self.future.set_result([])
-'''
-
-
 class SendMessage(tornado.web.RequestHandler):
     @gen.coroutine
     def post(self):
@@ -174,34 +99,6 @@ class SendMessage(tornado.web.RequestHandler):
             self.write('OK')
         except Exception:
             self.write('Исключительная ситуация при получении сообщения comet-сервером')
-
-'''
-class MessageSender(tornado.web.RequestHandler):
-    @gen.coroutine
-    def post(self):
-        result = 'FAILED'
-        try:
-            secret, sid, msgText, msgID = self.request.body.decode('utf-8').split('\n', 3)
-            if secret == AUTH_SECRET:
-                yield msgQueue.put({
-                    'id': msgID,
-                    'text': msgText,
-                    'username': authUsers[sid]
-                })
-            result = 'OK'
-        except Exception:
-            pass
-        self.write(result)
-'''
-
-'''
-    @gen.coroutine
-    def save_message(self, msgText, sid):
-        userName = authUsers[sid][0]
-        result = yield AsyncHTTPClient('http://127.0.0.1:8888/chat/save-message').fetch(body=msgText, headers={'Cookie': 'sessionid={}'.format(sid)})
-        print(result)
-        return result
-'''
 
 
 if __name__ == '__main__':
